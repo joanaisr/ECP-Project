@@ -1,0 +1,86 @@
+## Script used for the associations between protein abundance and APOE, and amyloid score in the EMIF-AB MBD cohort. Using CKB association with APOe4 as an example. ##
+
+library(ggplot2)
+library(ggbeeswarm)
+library(ggpubr)
+library(ggthemes)
+library(ggsignif)
+library(dplyr)
+
+## Loading data ##
+
+df <- "....."   ## add your file path ##
+df <- read.csv(file = df, header = TRUE, sep = ",")
+df2 <- as.data.frame(df)
+
+## CKB - repeat for all proteins of interest, changing every CKB ##
+
+glmModel1 <- glm(APOEdich ~ CKB + Age + Gender + Eduy, data = df2)    
+summary(glmModel1)
+
+
+df2[["APOEdich"]]  <- factor(df2[["APOEdich"]], c("0", "1"))     ## Substitute "APOEdich" with "Amyloid" for the amyloid score (depending on your .csv file) ##
+
+
+CKB_APOEdich <- ggplot(data=subset(df2, !is.na(APOEdich)), aes(x = APOEdich, y = CKB, color = APOEdich)) +     ## Substitute "APOEdich" with "Amyloid" for the amyloid score (depending on your .csv file) ##
+  geom_boxplot(width = 0.3, 
+               outlier.colour= NULL, outlier.shape= NA, notch=FALSE, lwd=0.5, color = "black", na.rm = TRUE) +
+  geom_beeswarm(cex=1, size=2, show.legend=FALSE, na.rm = TRUE) +
+  theme_few(base_size = 20) +
+  geom_signif(
+    comparisons = list(c(1, 2)), 
+    annotations = paste(round(summary(glmModel1)$coefficients["CKB", "Pr(>|t|)"], 5)),  ## change the number of decimals when needed ##
+    y_position = 0.7,                                                                   ## change position of the laber when needed ##
+    tip_length = 0.02,  
+    textsize = 4.5,  
+    size = 0.5,
+    colour = "black", vjust = -0.5) +
+  scale_y_continuous(
+    expand = expansion(mult = c(0.1, 0.15))  
+  ) +
+  labs (title = "CKB",
+        x = "APOE4 carrier",     ## Substitute "APOEdich" with "Amyloid" for the amyloid score (depending on your .csv file) ##
+        y = "CKB (log2)") +
+  theme(axis.title.y = element_text(size = 12, face = "plain", colour = "black", vjust = -1, hjust = 0.5),
+        axis.text.x = element_text(size = 12,colour = "black"), 
+        axis.text.y = element_text(size = 12, colour = "black", margin = margin(t = 0, r = 1, b = 5, l = 5)),
+        title = element_text(size = 12, face = "plain"),
+        legend.text = element_text(size = 12),
+        legend.position = "none", 
+        legend.key.size = unit(0.85,"cm"),
+        panel.background=element_rect(colour="black"),
+        plot.caption = element_text(hjust = 0),
+        plot.caption.position = "panel",
+        plot.title=element_text(hjust=0, vjust=0.5, face='plain')) +
+  scale_color_manual(values=c('0' = "#4FB4CE", "1" = "#F15E6E"))
+
+CKB_APOEdich
+
+
+## After creating the plots for all proteins of interest, rearrange the plots into one single figure ##
+
+ciliaprots_APOEdich <- ggpubr::ggarrange(SELENBP1_APOEdich + rremove("xlab") + rremove("ylab"),
+                                         PRDX1_APOEdich + rremove("xlab") + rremove("ylab"),
+                                         DDAH1_APOEdich + rremove("xlab") + rremove("ylab"),
+                                         CKB_APOEdich + rremove("xlab") + rremove("ylab"),
+                                         ENO1_APOEdich + rremove("xlab") + rremove("ylab"),
+                                         PKM_APOEdich + rremove("xlab") + rremove("ylab"),
+                                         YWHAE_APOEdich + rremove("xlab") + rremove("ylab"),
+                                         HSPA8_APOEdich + rremove("xlab") + rremove("ylab"),
+                                         TXN_APOEdich + rremove("xlab") + rremove("ylab"),
+                                     labels = NULL, # labels
+                                     align = "hv", # Align them both, horizontal and vertical
+                                     nrow = 2, # number of rows
+                                     ncol = 5, #number of columns
+                                     font.label = list(size = 20, face = "bold", family = "Calibri"), vjust = 1, hjust = -0.2
+                                     )
+
+ciliaprots_APOEdich
+
+
+ggsave(filename = "......tiff", plot = ciliaprots_APOEdich %>%        ## choose your own file name ##
+         annotate_figure(ciliaprots_APOEdich, 
+                         bottom = textGrob("APOE ε4 carrier score", rot = 0, vjust = 0.4, hjust = 0.5, gp = gpar(cex = 1.3)),
+                         left = textGrob("Protein Abundance (log2)", rot = 90, vjust = 1, hjust = 0.5, gp = gpar(cex = 1.3))
+                         ),
+       dpi = 600, width = 15, height = 6.5, units = "in")
