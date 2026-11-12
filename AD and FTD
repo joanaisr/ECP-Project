@@ -1,0 +1,82 @@
+## Script used for the AD and FTD comparison in Figure 6B. Using CKB as an example. ##
+
+library(dplyr)
+library(rstatix)
+library(ggplot2)
+library(ggbeeswarm)
+library(ggthemes)
+library(ggpubr)
+library(scales)
+
+## Loading data ##
+
+df <- "....."   ## add your file path ##
+df <- read.csv(file = df, header = TRUE, sep = ",")
+df2 <- as.data.frame(df)
+
+df2[["Disease"]]  <- factor(df2[["Disease"]], c("AD", "FTD"))
+
+## CKB - repeat for all proteins of interest, changing every CKB ##
+
+stat.test <- df2 %>%
+  wilcox_test(CKB ~ Disease) %>%
+  add_significance()
+
+stat.test
+
+stat.test <- stat.test %>% add_xy_position(x = "Disease")
+
+CKB_plot <- ggplot(df2, aes(Disease, CKB, color = Disease)) +
+  geom_boxplot(width = 0.5, 
+               outlier.colour= NULL, outlier.shape= NA, notch=FALSE, lwd=0.5, color = "black") +
+  geom_beeswarm(cex=1, size=2, show.legend=FALSE) +
+  labs (title = "CKB",
+        x = "Disease",
+        y = "Protein expression (normalized to median of NC individuals)") +
+  theme(axis.title = element_text(size = 12, face = "plain", colour = "black"),
+        axis.text.x = element_text(size = 11,colour = "black"), 
+        axis.text.y = element_text(size = 12, colour = "black", margin = margin(t = 0, r = 1, b = 5, l = 5)),
+        title = element_text(size = 10, face = "bold"),
+        legend.text = element_text(size = 16),
+        legend.position = "none", 
+        legend.key.size = unit(0.85,"cm"),
+        panel.background=element_rect(colour="black"),
+        plot.caption = element_text(hjust = 0),
+        plot.caption.position = "panel",
+        plot.title=element_text(hjust=0, vjust=0.5, face='bold')) +
+  theme_few() +
+  scale_color_manual(values=c('AD' = "#4FB4CE", "FTD" = "#F15E6E")) +
+  scale_y_continuous(expand = c(0, 0), limits = c(0.5, 2), breaks = seq(0, 2, by = 0.5)) +
+  stat_pvalue_manual(stat.test, y.position = 1.8, size = 4.5, label = "p = {scales::pvalue(p)}", hide.ns = TRUE,
+                     tip.length = 0.04, step.increase = 0.05, bracket.size = 0.5, vjust = -0.4) +
+  scale_y_continuous(
+    expand = expansion(mult = c(0.2, 0.2)))  # This will add extra space at the top of the y-axis for the bracket
+
+CKB_plot
+
+## After creating the plots for all proteins of interest, rearrange the plots into one single figure ##
+
+EMIF_vs_GENFI <- ggpubr::ggarrange(SELENBP1_plot + rremove("ylab") + rremove("xlab"),
+                                  PRDX1_plot + rremove("ylab") + rremove("xlab"),
+                                  DDAH1_plot + rremove("ylab") + rremove("xlab"),
+                                  CKB_plot + rremove("ylab") + rremove("xlab"),
+                                  ENO1_plot + rremove("ylab") + rremove("xlab"),
+                                  PKM_plot + rremove("ylab") + rremove("xlab"),
+                                  YWHAE_plot + rremove("ylab") + rremove("xlab"),
+                                  HSPA8_plot + rremove("ylab") + rremove("xlab"),
+                                  TXN_plot + rremove("ylab") + rremove("xlab"),
+                                labels = NULL, # labels
+                                align = "hv", # Align them both, horizontal and vertical
+                                nrow = 3, # number of rows
+                                ncol = 3, #number of columns
+                                font.label = list(size = 20, face = "bold", family = "Calibri"), vjust = 1.5, hjust = -0.2)
+
+EMIF_vs_GENFI
+
+
+EMIF_vs_GENFI <- annotate_figure(EMIF_vs_GENFI, left = textGrob("Protein abundance (normalized to median of NC individuals)", rot = 90, vjust = 0.5, gp = gpar(cex = 1.5)),
+                    bottom = textGrob("", gp = gpar(cex = 1.3)))
+
+
+ggsave(filename = "......tiff", plot = EMIF_vs_GENFI, dpi = 600, width = 12, height = 12, units = "in")      ## choose your own file name ##
+
