@@ -1,0 +1,68 @@
+## Script for the heatmap in Figure 2A. Figure 2B heatmap was created similarly, with changes in colors, no row cluster, and addition of an annotation ##
+
+library(circlize)
+if (!require("BiocManager", quietly = TRUE))
+  install.packages("BiocManager")
+
+BiocManager::install("ComplexHeatmap")
+library("ComplexHeatmap")
+
+
+## Loading data ##
+CiliaHits <- (".....") ## add your file path ##
+CiliaHits_table <- read.csv(file = CiliaHits, header = TRUE, sep = ",", check.names = FALSE)
+
+## Create a table and a matrix ##
+table2 <- CiliaHits_table[,-1]
+rownames(table2) <- CiliaHits_table[,1]
+CiliaHits_matrix <- as.matrix(table2)
+
+## Convert characters to numeric ##
+
+num_matrix_cilia <- matrix(as.numeric(CiliaHits_matrix),
+                           ncol = ncol(CiliaHits_matrix),
+                           nrow = nrow(CiliaHits_matrix))
+
+## Maintain column and row names ##
+
+cnames <- colnames(CiliaHits_matrix)
+colnames(num_matrix_cilia) = cnames
+rnames <- rownames(CiliaHits_matrix)
+rownames(num_matrix_cilia) = rnames
+
+## Choose colors ##
+
+col_fun = colorRamp2(
+  breaks = seq(min(num_matrix_cilia), max(num_matrix_cilia), length.out = 6),
+  colors = c("#042848", "#074B89","#4FB4CE","white", "#BF2739", "#61141d"))
+
+
+### Create the heatmap ###
+
+heatmap_47 <- Heatmap(num_matrix_cilia, name = "Protein abundance (log2)",
+                      col = col_fun,
+                      cluster_rows = TRUE, clustering_method_rows = "ward.D",
+                      show_row_dend = TRUE, , row_dend_side = "left", row_dend_width = unit(2,"cm"),
+                      show_row_names = TRUE, row_names_gp = gpar(fontsize = 12), row_names_rot = 0, row_names_side = "left",
+                      row_title = "",
+                      cluster_columns = FALSE, show_column_dend = FALSE, 
+                      column_names_side = "top", show_column_names = TRUE, column_names_rot = 65, column_names_gp = gpar(fontsize = 12),
+                      column_names_centered = TRUE,
+                      column_title = "", column_title_gp = gpar(fontsize = 12),
+                      show_heatmap_legend = TRUE,
+                      heatmap_legend_param = list(legend_height = unit(7, "cm"),
+                                                  title_position = "lefttop-rot",
+                                                  legend_position = "right",
+                                                  labels_gp = gpar(fontsize = 12),
+                                                  title_gp = gpar(fontsize = 12, fontface = "bold")),
+                      width = unit(4, "cm"), height = unit (30, "cm"),
+                      rect_gp = gpar(col = "white", lwd = 2)
+                      ) 
+
+print(heatmap_47)
+
+tiff(filename = "47_heatmap_vertical.tiff", width = 11, height = 32, units = "cm", res = 300)
+
+plot(heatmap_47)
+
+dev.off()
