@@ -1,0 +1,60 @@
+## Linear regression model function used for Tables S3, S4, and S5. This specific code is for the EMIF-AD MBD cohort, so some adjustments are required for other cohorts ##
+
+library(emmeans)
+
+## Loading data ##
+
+lmdf <- "....."   ## add your file path ##
+lmdf <- read.csv(file = lmdf, header = TRUE, sep = ",")
+lmdf2 <- as.data.frame(lmdf)
+lmdf2$Diagnosis <- as.factor(lmdf2$Diagnosis)
+lmdf2[["Diagnosis"]]  <- factor(lmdf2[["Diagnosis"]], c("NC", "MCI", "MCI+", "AD"))   ## Change groups' names for the other cohorts ##
+lmdf2$Age <- as.numeric(lmdf2$Age)
+lmdf2$Gender <- as.factor(lmdf2$Gender)
+lmdf2$Eduy <- as.numeric(lmdf2$Eduy)   ## remove for the cohort that does not have education data ##
+
+vars_to_test <- names(lmdf2)[15:61]   ## change the collumns to be analysed based on your .csv file ##
+
+
+## Linear regression model function ##
+lmresults <- data.frame()
+
+for (var in vars_to_test) {
+  fmla <- as.formula(paste0("`", var, "` ~ Diagnosis + Age + Gender + Eduy"))   ## remove Eduy for the cohort that does not have education data ##
+  
+  fit <- tryCatch({
+    lm(fmla, data = lmdf2)
+  }, error = function(e) return(NULL))
+  
+  if (!is.null(fit)) {
+    emmeans_results <- tryCatch({
+      pairs(emmeans(fit, "Diagnosis"), adjust = "BH")
+    }, error = function(e) return(NULL))
+    
+    if (!is.null(emmeans_results)) {
+      temp_lmdf <- as.data.frame(
+        summary(emmeans_results, infer = c(TRUE, TRUE))
+      )
+      
+      temp_lmdf$Variable <- var
+      temp_lmdf$Fold_change <- 2^temp_lmdf$estimate 
+      temp_lmdf$FC_lower_CI <- 2^temp_lmdf$lower.CL
+      temp_lmdf$FC_upper_CI <- 2^temp_lmdf$upper.CL
+      group_counts <- table(lmdf2$Diagnosis)
+      contrast_groups <- strsplit(temp_lmdf$contrast, " - ", fixed = TRUE)   ## this only apllies because one of the groups was read as "(MCI+)" ##
+      temp_lmdf$n_group1 <- sapply(contrast_groups, function(x) {
+        group <- gsub("[()]", "", trimws(x[1]))
+        as.numeric(group_counts[group])
+      })
+      temp_lmdf$n_group2 <- sapply(contrast_groups, function(x) {
+        group <- gsub("[()]", "", trimws(x[2]))
+        as.numeric(group_counts[group])
+      })
+    
+      lmresults <- rbind(lmresults, temp_lmdf)
+    }
+  }
+}
+
+## save results as a .csv file ##
+write.csv(lmresults, ".....csv", row.names = FALSE)    ## add your file name ##
