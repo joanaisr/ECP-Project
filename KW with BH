@@ -1,7 +1,8 @@
 ## Kruskal-Wallis analysis with BH correction performed to search for proteins with statistically significant differences between diagnostic groups (Figure 1A and Table S2) ##
 
-(library(writexl)
+library(writexl)
 
+## Loading data ##
 df <- "...."  ## add your file path ##
 df <- read.csv(file = df, header = TRUE, sep = ";")
 df2 <- as.data.frame(df)
@@ -9,6 +10,8 @@ df2 <- as.data.frame(df)
 df2[["Diagnosis"]] <- factor(df2[["Diagnosis"]], c("NC","MCI","MCI+","AD"))
 names(df2)[1] <- "Diagnosis"
 groups <- rep(c("NC","MCI","MCI+","AD"))
+
+## KW function ##
 
 kruskal_test_all_columns <- function(df2, group_column) {
   df2[[group_column]] <- as.factor(df2[[group_column]])
@@ -23,17 +26,20 @@ kruskal_test_all_columns <- function(df2, group_column) {
 
 kruskal_results <- kruskal_test_all_columns(df2, "Diagnosis")
 
+## df creation ##
 all_results <- data.frame(Variable = character(),
                           p_value = numeric(),
                           stringsAsFactors = FALSE)
 
+##p-value collection ##
 for (col in names(kruskal_results)) {
   p_value <- kruskal_results[[col]]$p.value
   all_results <- rbind(all_results, data.frame(Variable = col, p_value = p_value))}
 
+## BH correction ##
 all_results$adj_p_value_BH <- p.adjust(all_results$p_value, method = "BH")
 
-
+## Export as an .xlsx file ##
 write_xlsx(all_results, "...........xlsx") ## add your new file name ##
 
 
